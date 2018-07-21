@@ -1,46 +1,59 @@
 import os
 import gzip
 import pickle
+from math import trunc
+
 import utilities as utils
 import numpy as np
 import tensorflow as tf
+
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # Suppress TensorFlow debugging
 ########
 # https://www.oreilly.com/learning/not-another-mnist-tutorial-with-tensorflow
 
-data_path = 'data/'
-
 # Load training and test data
-with gzip.open(data_path + 'mnist.pkl', 'rb') as file:
-    dataset = pickle.load(file)
+with gzip.open('data/mnist.pkl', 'rb') as file:
+    data = pickle.load(file)
 
-train_images = dataset['train_images']
-train_labels = dataset['train_labels']
-test_images = dataset['test_images']
-test_labels = dataset['test_labels']
+train_images = data['train_images']
+train_labels = data['train_labels']
+test_images = data['test_images']
+test_labels = data['test_labels']
 
-input_dim = 784  # 28 x 28
+# Data parameters
+input_size = train_images.shape[1]  # 784 (28 x 28)
+num_classes = len(np.unique(train_labels))  # 10
+num_training_examples = train_images.shape[0]  # 60,000
+num_test_examples = test_images.shape[0]  # 10,000
+
+print("Input size: ", input_size)
+print("Number of classes: ", num_classes)
+print("Number of training examples:", num_training_examples)
+print("Number of test examples:", num_test_examples)
+
+# Network parameters
 num_hidden_nodes = 500
-num_classes = 10
-batch_size = 100
-num_epochs = 2
-learning_rate = 0.01
 
-print(train_images.shape)
-print(train_labels.shape)
-print(test_images.shape)
-print(test_labels.shape)
+# Training parameters
+batch_size = 100
+num_epochs = 10
+learning_rate = 0.01
 
 # Display a random digit
 # utils.display_digit(train_x, train_y, np.random.randint(0, train_x.shape[0]))
 
-x = tf.placeholder(tf.float32, [None, input_dim])
-y = tf.placeholder(tf.int64)
+# Image and label placeholder variables
+images_placeholder = tf.placeholder(tf.float32, [None, input_size])
+labels_placeholder = tf.placeholder(tf.int32)
+
+# Make Tensorflow dataset and iterator
+dataset = tf.data.Dataset.from_tensor_slices((images_placeholder, labels_placeholder)).batch(batch_size).repeat(1)
+iterator = dataset.make_initializable_iterator()
+images, labels = iterator.get_next()
 
 
 def neural_network_model(input_data):
-
-    hidden_layer_1 = {'weights': tf.Variable(tf.random_normal([input_dim, num_hidden_nodes])),
+    hidden_layer_1 = {'weights': tf.Variable(tf.random_normal([input_size, num_hidden_nodes])),
                       'biases': tf.Variable(tf.random_normal([num_hidden_nodes]))}
 
     hidden_layer_2 = {'weights': tf.Variable(tf.random_normal([num_hidden_nodes, num_hidden_nodes])),
@@ -66,43 +79,70 @@ def neural_network_model(input_data):
     return output
 
 
-def train_neural_network(input_data):
+# Pass data through the model
+prediction = neural_network_model(images)
 
-    # Pass data through the model
-    prediction = neural_network_model(input_data)
+# Calculate the cost
+cost = tf.reduce_sum(tf.losses.sparse_softmax_cross_entropy(labels, prediction))
 
-    # Calculate the cost
-    # cost = tf.reduce_mean( tf.nn.softmax_cross_entropy_with_logits_v2(logits=prediction, labels=y) ) / train_x.shape[0]
-    cost = tf.reduce_mean(tf.losses.sparse_softmax_cross_entropy(y, prediction))
+# Minimise the cost with optimisation function
+optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(cost)
 
-    # Minimise the cost with optimisation function
-    optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(cost)
+# Count how many predictions (index of highest probability) match the labels
+correct = tf.equal(tf.argmax(prediction, axis=1), tf.cast(labels, tf.int64))
 
-    with tf.Session() as sess:
-        # Initialise all the variables
-        sess.run(tf.global_variables_initializer())
+# Count how many are correct
+num_correct = tf.reduce_sum(tf.cast(correct, tf.int32))
 
-        for epoch in range(num_epochs):
-            epoch_loss = 0
-            # for _ in range(int(mnist.train.num_examples / batch_size)):
-            #     epoch_x, epoch_y = mnist.train.next_batch(batch_size)
-            _, c = sess.run([optimizer, cost], feed_dict={x: train_images, y: train_labels})
+# Calculate the average of correct predictions
+accuracy = tf.reduce_mean(tf.cast(correct, tf.float32))
 
-            epoch_loss = c
+with tf.Session() as sess:
 
-            print("Epoch", epoch + 1, "completed out of", num_epochs, "loss:", epoch_loss)
+    # Initialise all the variables
+    sess.run(tf.global_variables_initializer())
 
-        # Count how many predictions (index of highest probability) match the labels
-        correct = tf.equal(tf.argmax(prediction, axis=1), y)
+    # Loop for number of training epochs
+    for epoch in range(1, num_epochs + 1):
+        epoch_loss = batch_loss = 0
+        epoch_accuracy = batch_accuracy = 0
 
-        # Count how many are correct
-        num_correct = tf.reduce_sum(tf.cast(correct, tf.int32))
+        # Initialise the iterator with the training data
+        sess.run(iterator.initializer, feed_dict={images_placeholder: train_images, labels_placeholder: train_labels})
 
-        # Calculate the average for correct predictions
-        accuracy = tf.reduce_mean(tf.cast(correct, tf.float32))
+        # Loop over each batch once per epoch
+        while True:
+            try:
+                _, batch_loss, batch_accuracy = sess.run([optimizer, cost, accuracy])
+            except tf.errors.OutOfRangeError:
+                break
 
-        print("Number Correct: " + str(num_correct.eval(feed_dict={x: test_images, y: test_labels})) + " / " + str(test_images.shape[0]))
-        print("Accuracy: " + str(accuracy.eval(feed_dict={x: test_images, y: test_labels})))
+        epoch_loss += batch_loss
+        epoch_accuracy += batch_accuracy
+        print("Epoch: {}/{}, loss: {:.3f}, accuracy: {:.2f}%".format(epoch, num_epochs, epoch_loss, epoch_accuracy * 100))
 
+    test_epochs = 20
+    average_accuracy = total_num_correct = 0
+    # Loop over each batch once per epoch
+    for epoch in range(1, test_epochs + 1):
+        epoch_accuracy = batch_accuracy = 0
+        batch_num_correct = 0
 
-train_neural_network(x)
+        # Initialise the iterator with the test data
+        sess.run(iterator.initializer, feed_dict={images_placeholder: test_images, labels_placeholder: test_labels})
+        while True:
+            try:
+                batch_accuracy, batch_num_correct = sess.run([accuracy, num_correct])
+                total_num_correct += batch_num_correct
+            except tf.errors.OutOfRangeError:
+                break
+        epoch_accuracy += batch_accuracy
+        average_accuracy += batch_accuracy
+        print("Epoch: {}/{}, accuracy: {:.2f}%".format(epoch, test_epochs, epoch_accuracy * 100))
+
+    print("Average test set accuracy over {} iterations is {:.2f}%".format(test_epochs, (average_accuracy * 100) / test_epochs))
+    print("Number Correct {:.0f}/{}".format((total_num_correct / test_epochs), num_test_examples))
+
+    # Run on whole test set once
+    print("Accuracy: {:.2f}%".format(accuracy.eval(feed_dict={images: test_images, labels: test_labels}) * 100))
+    print("Number Correct: {}/{}".format((num_correct.eval(feed_dict={images: test_images, labels: test_labels})), num_test_examples))
