@@ -4,3 +4,4 @@
 - Graphs
 - Tensorboard
 - Separate ANN into class
+- Save model
