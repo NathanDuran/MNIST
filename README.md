@@ -5,3 +5,7 @@
 - Tensorboard
 - Separate ANN into class
 - Save model
+
+
+## Run Tensorboard
+tensorboard --logdir=./output

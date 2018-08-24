@@ -3,6 +3,4 @@
 *.pyo
 
 .idea
-/example.py
-/mnist_OLD.py
-/tf_example.py
+/backup/
