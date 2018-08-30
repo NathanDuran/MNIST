@@ -2,12 +2,12 @@ import tensorflow as tf
 
 
 # Creates dataset and iterator placeholders for feeding data into the network
-def make_dataset_placeholder(input_size, batch_size, name='dataset'):
+def make_dataset_placeholder(input_size, num_classes, batch_size, name='dataset'):
 
     with tf.name_scope(name):
         # Image and label placeholder variables
         images_placeholder = tf.placeholder(tf.float32, [None, input_size], name='images_placeholder')
-        labels_placeholder = tf.placeholder(tf.int32, name='labels_placeholder')
+        labels_placeholder = tf.placeholder(tf.float32, [None, num_classes], name='labels_placeholder')
 
         # Make Tensorflow dataset placeholder
         dataset = tf.data.Dataset.from_tensor_slices((images_placeholder, labels_placeholder)).batch(batch_size).repeat(1)
@@ -41,7 +41,9 @@ def nn_layer(input_tensor, input_dim, output_dim, activation_func=tf.nn.relu, la
 
         # Weights
         with tf.name_scope('weights'):
-            weights = tf.Variable(tf.truncated_normal(shape=[input_dim, output_dim], stddev=1.0))
+            weights = tf.Variable(tf.truncated_normal(shape=[input_dim, output_dim], stddev=0.1))
+            # weights = tf.Variable(tf.random_normal(shape=[input_dim, output_dim], stddev=1.0, seed=16))#8?9?
+            # weights = tf.Variable(tf.random_uniform(shape=[input_dim, output_dim], stddev=0.5))
             if summary:
                 variable_summaries(weights)
 
