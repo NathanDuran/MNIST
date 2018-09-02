@@ -10,7 +10,8 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # Suppress TensorFlow debugging
 
 # Data and Tensorboard path
 data_path = 'data/mnist.pkl'
-tensorboard_path = 'tb_logs/single_layer'
+tensorboard_path = 'output/single_layer/tb_logs'
+image_path = 'output/single_layer/images'
 
 # Load training and test data
 with gzip.open(data_path, 'rb') as file:
@@ -49,11 +50,6 @@ print('Define Graph...')
 images_placeholder = tf.placeholder(tf.float32, [None, input_size], name='images')
 labels_placeholder = tf.placeholder(tf.float32, [None, num_classes], name='labels')
 
-# weights = tf.Variable(tf.truncated_normal(shape=[input_size, num_classes], stddev=0.2))
-# weights = tf.Variable(tf.random_normal(shape=[input_size, num_classes], stddev=0.5))
-# weights = tf.Variable(tf.random_uniform(shape=[input_size, num_classes], minval=-0.05, maxval=0.05))
-# biases = tf.Variable(tf.constant(0.1, shape=[num_classes]))
-
 # Define single layer network
 with tf.name_scope('nn_layer'):
     weights = tf.Variable(tf.zeros([input_size, num_classes], dtype='float32'), name='weights')
@@ -77,13 +73,16 @@ with tf.name_scope('accuracy'):
     accuracy_summary = tf.summary.scalar('Accuracy', accuracy)
 
 # Create images for each nodes weights
-with tf.name_scope('tensorboard_images'):
+with tf.name_scope('tb_images'):
     weight_images = tf.reshape(tf.transpose(weights), [num_classes, 28, 28, 1])
     image_summary = tf.summary.image('hidden_weights', weight_images, max_outputs=num_classes)
 
 with tf.Session() as sess:
 
-    # TODO delete old tensorboard dir OR make new session
+    # Remove old Tensorboard directory
+    if tf.gfile.Exists(tensorboard_path):
+        tf.gfile.DeleteRecursively(tensorboard_path)
+
     # Create Tensorboard writers for the training and test data
     train_writer = tf.summary.FileWriter('%s/%s' % (tensorboard_path, 'train'), sess.graph)
     test_writer = tf.summary.FileWriter('%s/%s' % (tensorboard_path, 'test'), sess.graph)
@@ -110,11 +109,11 @@ with tf.Session() as sess:
         # Record training and image summaries
         train_writer.add_summary(train_summary, epoch)
         test_writer.add_summary(test_summary, epoch)
-        train_writer.add_summary(image_summary.eval(), epoch)
+        test_writer.add_summary(image_summary.eval(), epoch)
 
         # Display learned weights
-        if epoch % 100 == 0:
-            display_weights(weights, num_classes)
+        if epoch < 100 and epoch % 10 == 0 or epoch >= 100 and epoch % 100 == 0:
+            display_weights(weights, num_classes, epoch, test_accuracy, save=True, path=image_path)
 
         # Display epoch statistics
         print("Epoch: {}/{} - "
