@@ -1,6 +1,8 @@
 import gzip
 import csv
 import pickle
+from zipfile import ZipFile
+
 import numpy as np
 
 data_path = 'data/'
@@ -11,23 +13,27 @@ test_images = []
 test_labels = []
 
 # Unzip csv file
-with gzip.open(data_path + 'mnist_train.csv.gz', 'rt') as file:
-    csv_data = csv.reader(file, delimiter=',')
+with ZipFile(data_path + 'mnist.zip', 'r') as zipf:
 
-    for line in csv_data:
-        # First column are the labels
-        train_labels.append(line[0])
-        # Remaining columns are the data
-        train_images.append(line[1:])
+    with zipf.open('mnist_train.csv', 'r') as train_file:
+        # Decode from binary to ascii
+        lines = (line.decode('ascii') for line in train_file)
 
-with gzip.open(data_path + 'mnist_test.csv.gz', 'rt') as file:
-    csv_data = csv.reader(file, delimiter=',')
+        for line in csv.reader(lines):
+            # First column are the labels
+            train_labels.append(line[0])
+            # Remaining columns are the data
+            train_images.append(line[1:])
 
-    for line in csv_data:
-        # First column are the labels
-        test_labels.append(line[0])
-        # Remaining columns are the data
-        test_images.append(line[1:])
+    with zipf.open('mnist_test.csv', 'r') as test_file:
+        # Decode from binary to ascii
+        lines = (line.decode('ascii') for line in test_file)
+
+        for line in csv.reader(lines):
+            # First column are the labels
+            test_labels.append(line[0])
+            # Remaining columns are the data
+            test_images.append(line[1:])
 
 # Convert to numpy arrays
 train_images = np.array(train_images, dtype='float32')

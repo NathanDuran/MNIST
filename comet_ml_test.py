@@ -60,7 +60,7 @@ def train(hyper_params):
                 if i % 10 == 0:
                     train_accuracy = accuracy.eval(feed_dict={x: batch[0], y_: batch[1]})
                     print('step %d, training accuracy %g' % (i, train_accuracy))
-                    experiment.log_metric("accuracy",train_accuracy,step=i)
+                    experiment.log_metric("accuracy",train_accuracy, step=i)
 
                 # Update weights (back propagation)
                 _, loss_val = sess.run([train_step, cross_entropy],
