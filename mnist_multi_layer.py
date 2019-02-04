@@ -1,28 +1,20 @@
 import os
 import time
 import datetime
-import gzip
-import pickle
 import tensorflow as tf
 from tensorflow_utilities import nn_layer, dataset_placeholder
-from mnist_utilities import display_weights_matrix
+from mnist_utilities import display_weights_matrix, process_mnist
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # Suppress TensorFlow debugging
 
 # Data and Tensorboard path
-data_path = 'data/mnist.pkl'
+data_path = 'data/mnist.zip'
 tensorboard_path = 'output/multi_layer/tb_logs'
 image_path = 'output/multi_layer/images'
 
 # Load training and test data
-with gzip.open(data_path, 'rb') as file:
-    data = pickle.load(file)
-print("Loaded data from file %s." % data_path)
-
-train_images = data['train_images']
-train_labels = data['train_labels']
-test_images = data['test_images']
-test_labels = data['test_labels']
+train_images, train_labels = process_mnist(data_path, 'train')
+test_images, test_labels = process_mnist(data_path, 'test')
 
 # Data parameters
 input_size = train_images.shape[1]  # 784 (28 x 28)

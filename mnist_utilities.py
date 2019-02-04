@@ -1,14 +1,37 @@
-import matplotlib.pyplot as plt
+from zipfile import ZipFile
 from matplotlib import gridspec
+import matplotlib.pyplot as plt
+import pandas as pd
+import numpy as np
+
+
+# Load mnist data from zip
+# Note: set is either 'test' or 'train'
+def process_mnist(data_path, set):
+
+    # Unzip and read csv files
+    with ZipFile(data_path, 'r') as zipf:
+        mnist_data = pd.read_csv(zipf.open('mnist_' + set + '.csv'), header=None)
+
+        # First column are the labels
+        labels = pd.get_dummies(mnist_data.iloc[:, 0]).values
+        # Remaining columns are the image data
+        images = mnist_data.iloc[:, 1:mnist_data.shape[1]].values
+
+    return images, labels
 
 
 # Display single digit from mnist data
 def display_digit(images, labels, num):
 
-    label = labels[num]
+    # Convert labels from one-hot
+    label = np.where(labels[num] == 1)[0][0]
+    # Reshape back to image dimensions
     image = images[num].reshape([28, 28])
+
+    # Plot image
     plt.title('Example: %d  Label: %d' % (num, label))
-    plt.imshow(image, cmap=plt.get_cmap('gray_r'))
+    plt.imshow(image, cmap=plt.get_cmap('bone'))
     plt.show()
 
 

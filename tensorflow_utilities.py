@@ -54,7 +54,7 @@ def dataset_placeholder(input_size, num_classes, batch_size, name='dataset'):
 
     with tf.name_scope(name):
         # Image and label placeholder variables
-        instance_placeholder = tf.placeholder(tf.float32, [None, input_size], name='images_placeholder')
+        instance_placeholder = tf.placeholder(tf.float32, [None, input_size], name='instance_placeholder')
         labels_placeholder = tf.placeholder(tf.float32, [None, num_classes], name='labels_placeholder')
 
         # Make Tensorflow dataset placeholder
