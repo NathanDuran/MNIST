@@ -3,7 +3,7 @@ import time
 import datetime
 import tensorflow as tf
 from tensorflow_utilities import nn_layer, dataset_placeholder
-from mnist_utilities import display_weights_matrix, process_mnist
+from mnist_utilities import display_weights_matrix_large, process_mnist
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # Suppress TensorFlow debugging
 
@@ -42,17 +42,22 @@ print("Epochs: ", num_epochs)
 
 # Define Tensorflow Graph
 print("------------------------------------")
-print('Define Graph...')
+print("Define Graph...")
 
 # Define input dataset
-iterator, images_placeholder, labels_placeholder = dataset_placeholder(input_size, num_classes, batch_size, 'input_dataset')
+iterator, images_placeholder, labels_placeholder = dataset_placeholder(input_size, num_classes, batch_size,
+                                                                       'input_dataset')
 images, labels = iterator.get_next()
 
 # Define the network
-hidden_1, hidden_w1 = nn_layer(images, input_size, num_hidden_nodes, activation_func=tf.nn.relu, layer_name='hidden_layer_1')
-hidden_2, hidden_w2 = nn_layer(hidden_1, num_hidden_nodes, num_hidden_nodes, activation_func=tf.nn.relu, layer_name='hidden_layer_2')
-hidden_3, hidden_w3 = nn_layer(hidden_2, num_hidden_nodes, num_hidden_nodes, activation_func=tf.nn.relu, layer_name='hidden_layer_3')
-prediction, _ = nn_layer(hidden_3, num_hidden_nodes, num_classes, activation_func=tf.identity, layer_name='output_layer')
+hidden_1, hidden_w1 = nn_layer(images, input_size, num_hidden_nodes, activation_func=tf.nn.relu,
+                               layer_name='hidden_layer_1')
+hidden_2, hidden_w2 = nn_layer(hidden_1, num_hidden_nodes, num_hidden_nodes, activation_func=tf.nn.relu,
+                               layer_name='hidden_layer_2')
+hidden_3, hidden_w3 = nn_layer(hidden_2, num_hidden_nodes, num_hidden_nodes, activation_func=tf.nn.relu,
+                               layer_name='hidden_layer_3')
+prediction, _ = nn_layer(hidden_3, num_hidden_nodes, num_classes, activation_func=tf.identity,
+                         layer_name='output_layer')
 
 # Calculate the cost
 with tf.name_scope('cross_entropy'):
@@ -76,7 +81,6 @@ with tf.name_scope('tb_images'):
 
 # Run Tensorflow session
 with tf.Session() as sess:
-
     # Remove old Tensorboard directory
     if tf.gfile.Exists(tensorboard_path):
         tf.gfile.DeleteRecursively(tensorboard_path)
@@ -102,55 +106,56 @@ with tf.Session() as sess:
         sess.run(iterator.initializer, feed_dict={images_placeholder: train_images, labels_placeholder: train_labels})
 
         # Loop over each training batch once per epoch
-        train_loss = batch_loss = 0
-        train_accuracy = batch_accuracy = 0
+        batch_accuracy = 0
+        batch_loss = 0
+        train_accuracy = []
+        train_loss = []
         train_summary = None
         while True:
             try:
                 train_summary, _, batch_loss, batch_accuracy = sess.run([summary, optimizer, loss, accuracy])
+                train_loss.append(batch_loss)
+                train_accuracy.append(batch_accuracy)
             except tf.errors.OutOfRangeError:
                 break
 
         # Record training summaries
-        train_loss += batch_loss
-        train_accuracy += batch_accuracy
         train_writer.add_summary(train_summary, epoch)
 
         # Initialise the iterator with the test data
         sess.run(iterator.initializer, feed_dict={images_placeholder: test_images, labels_placeholder: test_labels})
 
         # Loop over each test batch once per epoch
-        test_loss = batch_loss = 0
-        test_accuracy = batch_accuracy = 0
+        batch_accuracy = 0
+        batch_loss = 0
+        test_accuracy = []
+        test_loss = []
         test_summary = None
         while True:
             try:
                 test_summary, batch_loss, batch_accuracy = sess.run([summary, loss, accuracy])
+                test_loss.append(batch_loss)
+                test_accuracy.append(batch_accuracy)
             except tf.errors.OutOfRangeError:
                 break
 
         # Record test and image summaries
-        test_loss += batch_loss
-        test_accuracy += batch_accuracy
         test_writer.add_summary(test_summary, epoch)
         test_writer.add_summary(image_summary.eval(), epoch)
 
         # Display learned weights for first layer
         if epoch < 10 or epoch >= 10 and epoch % 10 == 0:
-            display_weights_matrix(hidden_w1, num_hidden_nodes, epoch, test_accuracy, save=False, path=image_path)
+            display_weights_matrix_large(hidden_w1, num_hidden_nodes, epoch,
+                                         ((sum(test_accuracy) * 100) / len(test_accuracy)), save=False, path=image_path)
 
         # Display epoch statistics
         print("Epoch: {}/{} - "
-              "Training loss: {:.3f}, acc: {:.2f} - "
-              "Test loss: {:.3f}, acc: {:.2f}%".format(epoch, num_epochs, train_loss, train_accuracy * 100, test_loss, test_accuracy * 100))
+              "Training loss: {:.3f}, acc: {:.2f}% - "
+              "Test loss: {:.3f}, acc: {:.2f}%".format(epoch, num_epochs,
+                                                       (sum(train_loss) / len(train_loss)),
+                                                       ((sum(train_accuracy) * 100) / len(train_accuracy)),
+                                                       (sum(test_loss) / len(test_loss)),
+                                                       ((sum(test_accuracy) * 100) / len(test_accuracy))))
 
     end_time = time.time()
     print("Training took " + str(('%.3f' % (end_time - start_time))) + " seconds for", num_epochs, "epochs")
-
-    # Evaluate the model
-    # print("------------------------------------")
-    # print("Evaluating model...")
-    # Run on whole test set once
-    # print("Accuracy: {:.2f}%".format(accuracy.eval(feed_dict={images: test_images, labels: test_labels}) * 100))
-    # print("Number Correct: {}/{}".format((num_correct.eval(feed_dict={images: test_images, labels: test_labels})),
-    #                                      num_test_examples))

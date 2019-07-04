@@ -7,11 +7,11 @@ import numpy as np
 
 # Load mnist data from zip
 # Note: set is either 'test' or 'train'
-def process_mnist(data_path, set):
+def process_mnist(data_path, dataset):
 
     # Unzip and read csv files
     with ZipFile(data_path, 'r') as zipf:
-        mnist_data = pd.read_csv(zipf.open('mnist_' + set + '.csv'), header=None)
+        mnist_data = pd.read_csv(zipf.open('mnist_' + dataset + '.csv'), header=None)
 
         # First column are the labels
         labels = pd.get_dummies(mnist_data.iloc[:, 0]).values
@@ -37,7 +37,7 @@ def display_digit(images, labels, num):
 
 # Display weights for each node in the input weight_matrix
 # Note: includes title corresponding to node number so works best for small number of nodes (10 - 25)
-def display_weights(weights_matrix, num_hidden_nodes, epoch, accuracy, save=False, path=''):
+def display_weights_matrix_small(weights_matrix, num_hidden_nodes, epoch, accuracy, save=False, path=''):
 
     # Calculate number of rows to display
     num_cols = 5
@@ -73,7 +73,7 @@ def display_weights(weights_matrix, num_hidden_nodes, epoch, accuracy, save=Fals
 
 # Display weights for each node in the input weight_matrix
 # Note: minimal spacing between each nodes plot and no titles, so works for for larger number of nodes (25+)
-def display_weights_matrix(weights_matrix, num_hidden_nodes, epoch, accuracy, save=False, path=''):
+def display_weights_matrix_large(weights_matrix, num_hidden_nodes, epoch, accuracy, save=False, path=''):
 
     # Calculate number of rows to display
     num_cols = 5

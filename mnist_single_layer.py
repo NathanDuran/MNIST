@@ -2,7 +2,7 @@ import os
 import time
 import datetime
 import tensorflow as tf
-from mnist_utilities import display_weights, process_mnist
+from mnist_utilities import display_weights_matrix_small, process_mnist
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # Suppress TensorFlow debugging
 
@@ -60,8 +60,8 @@ with tf.name_scope('optimizer'):
 
 # Calculate the average of correct predictions
 with tf.name_scope('accuracy'):
-    correct_prediction = tf.equal(tf.argmax(output_prediction, axis=1), tf.argmax(labels_placeholder, axis=1), name='correct')
-    accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32), name='accuracy')
+    correct_prediction = tf.equal(tf.argmax(output_prediction, axis=1), tf.argmax(labels_placeholder, axis=1))
+    accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
     accuracy_summary = tf.summary.scalar('Accuracy', accuracy)
 
 # Create images for each nodes weights
@@ -105,7 +105,7 @@ with tf.Session() as sess:
 
         # Display learned weights
         if epoch < 100 and epoch % 10 == 0 or epoch >= 100 and epoch % 100 == 0:
-            display_weights(weights, num_classes, epoch, test_accuracy, save=True, path=image_path)
+            display_weights_matrix_small(weights, num_classes, epoch, test_accuracy, save=True, path=image_path)
 
         # Display epoch statistics
         print("Epoch: {}/{} - "
